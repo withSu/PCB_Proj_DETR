@@ -1,9 +1,3 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-"""
-COCO dataset which returns image_id for evaluation.
-
-Mostly copy-paste from https://github.com/pytorch/vision/blob/13b35ff/references/detection/coco_utils.py
-"""
 from pathlib import Path
 
 import torch
@@ -147,12 +141,22 @@ def make_coco_transforms(image_set):
 def build(image_set, args):
     root = Path(args.coco_path)
     assert root.exists(), f'provided COCO path {root} does not exist'
-    mode = 'instances'
-    PATHS = {
-        "train": (root / "train2017", root / "annotations" / f'{mode}_train2017.json'),
-        "val": (root / "val2017", root / "annotations" / f'{mode}_val2017.json'),
-    }
 
-    img_folder, ann_file = PATHS[image_set]
-    dataset = CocoDetection(img_folder, ann_file, transforms=make_coco_transforms(image_set), return_masks=args.masks)
+    # 각 데이터셋 경로 및 파일 설정
+    if image_set == 'train':
+        img_folder = root / "train_images"
+        ann_file = root / args.train_json
+    elif image_set == 'val':
+        img_folder = root / "val_images"
+        ann_file = root / args.val_json
+    else:
+        raise ValueError(f"Unknown image_set: {image_set}")
+
+    # 데이터셋 생성
+    dataset = CocoDetection(
+        img_folder, 
+        ann_file, 
+        transforms=make_coco_transforms(image_set), 
+        return_masks=args.masks
+    )
     return dataset
