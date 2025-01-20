@@ -10,7 +10,7 @@ def split_and_convert_to_coco(json_dir, image_dir, output_dir, train_ratio=0.7, 
             "annotations": [],
             "categories": [
                 {
-                    "id": 1,
+                    "id": 0,
                     "name": "component"
                 }
             ]
@@ -94,7 +94,7 @@ def split_and_convert_to_coco(json_dir, image_dir, output_dir, train_ratio=0.7, 
                 annotation = {
                     "id": annotation_id,
                     "image_id": image_id,
-                    "category_id": 1,
+                    "category_id": 0,
                     "bbox": bbox,
                     "area": bbox[2] * bbox[3],
                     "iscrowd": 0

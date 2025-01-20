@@ -300,35 +300,27 @@ class MLP(nn.Module):
             x = F.relu(layer(x)) if i < self.num_layers - 1 else layer(x)
         return x
 
-
 def build(args):
-    # # the `num_classes` naming here is somewhat misleading.
-    # # it indeed corresponds to `max_obj_id + 1`, where max_obj_id
-    # # is the maximum id for a class in your dataset. For example,
-    # # COCO has a max_obj_id of 90, so we pass `num_classes` to be 91.
-    # # As another example, for a dataset that has a single class with id 1,
-    # # you should pass `num_classes` to be 2 (max_obj_id + 1).
-    # # For more details on this, check the following discussion
-    # # https://github.com/facebookresearch/detr/issues/108#issuecomment-650269223
-    # num_classes = 20 if args.dataset_file != 'coco' else 91
+    # 필요에 따라 COCO/기본값 대신, 사용자 지정 클래스 개수를 적용한다.
+    # no-object를 포함하기 위해 +1
+    num_classes = args.want_class
     
     
-    num_classes = args.want_class + 1  # no-object를 포함하기 위해 +1 추가    
     print(f"Number of classes set to: {num_classes}")
-
-
     
-    
+    # coco_panoptic을 사용할 경우, DETR 기본 설정상 num_classes = 250으로 강제한다.
+    # 만약 커스텀 데이터셋에 panoptic 세그멘테이션을 적용하지 않는다면
+    # 아래 코드를 주석처리하거나, 원래 로직에 맞춰 수정한다.
     if args.dataset_file == "coco_panoptic":
-        # for panoptic, we just add a num_classes that is large enough to hold
-        # max_obj_id + 1, but the exact value doesn't really matter
+        print("Using panoptic segmentation: num_classes is set to 250 by default.")
         num_classes = 250
+
     device = torch.device(args.device)
 
     backbone = build_backbone(args)
-
     transformer = build_transformer(args)
 
+    # DETR 모델 정의
     model = DETR(
         backbone,
         transformer,
@@ -336,15 +328,21 @@ def build(args):
         num_queries=args.num_queries,
         aux_loss=args.aux_loss,
     )
+
+    # 마스크 분할(mask) 모델인 경우
     if args.masks:
         model = DETRsegm(model, freeze_detr=(args.frozen_weights is not None))
+
     matcher = build_matcher(args)
+    
+    # 각 손실 항목의 가중치
     weight_dict = {'loss_ce': 1, 'loss_bbox': args.bbox_loss_coef}
     weight_dict['loss_giou'] = args.giou_loss_coef
     if args.masks:
         weight_dict["loss_mask"] = args.mask_loss_coef
         weight_dict["loss_dice"] = args.dice_loss_coef
-    # TODO this is a hack
+
+    # 디코더 레이어가 여러 개인 경우(보조 출력에 대한 손실)
     if args.aux_loss:
         aux_weight_dict = {}
         for i in range(args.dec_layers - 1):
@@ -354,9 +352,17 @@ def build(args):
     losses = ['labels', 'boxes', 'cardinality']
     if args.masks:
         losses += ["masks"]
-    criterion = SetCriterion(num_classes, matcher=matcher, weight_dict=weight_dict,
-                             eos_coef=args.eos_coef, losses=losses)
+
+    # 크리테리온(SetCriterion)에 num_classes를 꼭 동일하게 전달한다
+    criterion = SetCriterion(
+        num_classes=num_classes,
+        matcher=matcher,
+        weight_dict=weight_dict,
+        eos_coef=args.eos_coef,
+        losses=losses
+    )
     criterion.to(device)
+
     postprocessors = {'bbox': PostProcess()}
     if args.masks:
         postprocessors['segm'] = PostProcessSegm()

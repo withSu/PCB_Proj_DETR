@@ -18,3 +18,8 @@ experiment-*
 not_tracked_dir/
 .vscode
 raw_datasets/
+# models 폴더 내 .pth 파일 무시
+models/*.pth
+
+# 나머지 파일은 추적
+!models/*.py
