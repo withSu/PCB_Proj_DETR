@@ -8,6 +8,8 @@
 **/__pycache__/**
 .ipynb_checkpoints/
 datasets/data/
+!datasets/annotation/
+
 experiment-*
 *.tmp
 *.pkl
@@ -15,3 +17,4 @@ experiment-*
 .mypy_cache/*
 not_tracked_dir/
 .vscode
+raw_datasets/
