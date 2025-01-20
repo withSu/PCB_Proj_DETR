@@ -237,6 +237,36 @@ class RandomErasing(object):
 
     def __call__(self, img, target):
         return self.eraser(img), target
+    
+    
+#추가     
+class ColorJitter(object):
+    def __init__(self, brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1, p=1.0):
+        self.jitter = T.ColorJitter(brightness=brightness, 
+                                    contrast=contrast, 
+                                    saturation=saturation, 
+                                    hue=hue)
+        self.p = p
+
+    def __call__(self, img, target):
+        # p 확률로 적용
+        if random.random() < self.p:
+            img = self.jitter(img)
+        return img, target
+    
+    
+class GaussianBlur(object):
+    def __init__(self, kernel_size=(5, 5), sigma=(0.1, 2.0), p=0.5):
+        self.kernel_size = kernel_size
+        self.sigma = sigma
+        self.p = p
+
+    def __call__(self, img, target):
+        if random.random() < self.p:
+            # sigma 범위에서 랜덤 샘플
+            chosen_sigma = random.uniform(self.sigma[0], self.sigma[1])
+            img = F.gaussian_blur(img, self.kernel_size, chosen_sigma)
+        return img, target
 
 
 class Normalize(object):

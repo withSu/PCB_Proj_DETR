@@ -11,7 +11,20 @@ import torch.utils.data
 import torchvision
 from pycocotools import mask as coco_mask
 
-import datasets.transforms as T
+# 수정: 필요한 것들을 각각 임포트
+from datasets.transforms import (
+    Compose,
+    RandomHorizontalFlip,
+    RandomSelect,
+    RandomResize,
+    RandomSizeCrop,
+    GaussianBlur,
+    ToTensor,
+    Normalize,
+    ColorJitter,
+    # RandomRotation 등등
+)
+
 
 
 class CocoDetection(torchvision.datasets.CocoDetection):
@@ -111,38 +124,33 @@ class ConvertCocoPolysToMask(object):
 
         return image, target
 
-
 def make_coco_transforms(image_set):
-
-    normalize = T.Compose([
-        T.ToTensor(),
-        T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
-
-    scales = [480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800]
-
     if image_set == 'train':
-        return T.Compose([
-            T.RandomHorizontalFlip(),
-            T.RandomSelect(
-                T.RandomResize(scales, max_size=1333),
-                T.Compose([
-                    T.RandomResize([400, 500, 600]),
-                    T.RandomSizeCrop(384, 600),
-                    T.RandomResize(scales, max_size=1333),
+        return Compose([
+            RandomHorizontalFlip(p=0.5),
+            # 색상 변화
+            ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1, p=0.8),
+            # Resize
+            RandomSelect(
+                RandomResize([400, 500, 600, 700, 800, 900, 1000], max_size=1333),
+                Compose([
+                    RandomResize([400, 500, 600]),
+                    RandomSizeCrop(300, 600),
+                    RandomResize([400, 500, 600, 700, 800, 900, 1000], max_size=1333),
                 ])
             ),
-            normalize,
+            GaussianBlur(kernel_size=(5,5), sigma=(0.1,2.0), p=0.5),
+            ToTensor(),
+            Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
         ])
-
-    if image_set == 'val':
-        return T.Compose([
-            T.RandomResize([800], max_size=1333),
-            normalize,
+    elif image_set == 'val':
+        return Compose([
+            RandomResize([800], max_size=1333),
+            ToTensor(),
+            Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
         ])
-
-    raise ValueError(f'unknown {image_set}')
-
+    else:
+        raise ValueError(f"unknown image_set {image_set}")
 
 
 
