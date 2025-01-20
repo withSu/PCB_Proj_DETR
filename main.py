@@ -14,7 +14,10 @@ import datasets
 import util.misc as utils
 from datasets import build_dataset, get_coco_api_from_dataset
 from engine import evaluate, train_one_epoch
-from models import build_model
+from models import build_model 
+
+import torch.nn as nn #추가 
+
 
 
 def get_args_parser():
@@ -27,6 +30,8 @@ def get_args_parser():
     parser.add_argument('--lr_drop', default=200, type=int)
     parser.add_argument('--clip_max_norm', default=0.1, type=float,
                         help='gradient clipping max norm')
+    parser.add_argument('--want_class', type=int,
+                        help='number of class which want to finetuning') #추가
 
     # Model parameters
     parser.add_argument('--frozen_weights', type=str, default=None,
@@ -123,8 +128,15 @@ def main(args):
 
     model_without_ddp = model
     if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=True) # 변경
         model_without_ddp = model.module
+        
+    #fc layer 수정 추가    
+    num_ftrs = model_without_ddp.class_embed.in_features
+    model_without_ddp.class_embed = nn.Linear(num_ftrs, args.want_class + 2).to(device)
+    
+    
+    
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print('number of params:', n_parameters)
 
@@ -175,7 +187,7 @@ def main(args):
                 args.resume, map_location='cpu', check_hash=True)
         else:
             checkpoint = torch.load(args.resume, map_location='cpu')
-        model_without_ddp.load_state_dict(checkpoint['model'])
+        model_without_ddp.load_state_dict(checkpoint['model'], strict=False) # 변경
         if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
             optimizer.load_state_dict(checkpoint['optimizer'])
             lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])

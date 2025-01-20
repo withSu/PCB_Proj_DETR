@@ -144,15 +144,36 @@ def make_coco_transforms(image_set):
     raise ValueError(f'unknown {image_set}')
 
 
+
+
 def build(image_set, args):
-    root = Path(args.coco_path)
+    root = Path(args.coco_path)  # ./datasets 디렉토리
     assert root.exists(), f'provided COCO path {root} does not exist'
+    
     mode = 'instances'
     PATHS = {
-        "train": (root / "train2017", root / "annotations" / f'{mode}_train2017.json'),
-        "val": (root / "val2017", root / "annotations" / f'{mode}_val2017.json'),
+        "train": (root / "train_images", root / "annotations" / "train.json"),
+        "val": (root / "val_images", root / "annotations" / "val.json"),
+        "test": (root / "test_images", root / "annotations" / "test.json"),
     }
 
+    # image_set이 train, val, test 중 하나인지 확인
+    assert image_set in PATHS, f"unknown image_set {image_set}. Valid options are 'train', 'val', 'test'."
+
+    # 이미지와 어노테이션 경로 설정
     img_folder, ann_file = PATHS[image_set]
-    dataset = CocoDetection(img_folder, ann_file, transforms=make_coco_transforms(image_set), return_masks=args.masks)
+    print(f"Image folder: {img_folder}")
+    print(f"Annotation file: {ann_file}")
+    
+    # 경로가 존재하는지 확인
+    assert img_folder.exists(), f'Image folder {img_folder} does not exist.'
+    assert ann_file.exists(), f'Annotation file {ann_file} does not exist.'
+
+    # 데이터셋 로드
+    dataset = CocoDetection(
+        img_folder, 
+        ann_file, 
+        transforms=make_coco_transforms(image_set), 
+        return_masks=args.masks
+    )
     return dataset
