@@ -24,3 +24,10 @@ models/*.pth
 # 나머지 파일은 추적
 !models/*.py
 0_output_Backup/
+
+*.jpg
+datasets/test_images/*.jpg
+datasets/train_images/*.jpg
+datasets/val_images/*.jpg
+
+0_output_Backup/
