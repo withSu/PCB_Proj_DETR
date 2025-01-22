@@ -33,3 +33,4 @@ datasets/val_images/*.jpg
 
 output/
 output_augmented_eos0.2/
+inference_results/vis/
