@@ -19,6 +19,7 @@ import torch.nn as nn  # 추가
 import os
 
 from visualize_utils import inference_and_visualize # 시각화 함수 임포트
+from util.misc import get_coco_api_from_dataset
 
 
 
