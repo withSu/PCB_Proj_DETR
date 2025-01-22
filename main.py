@@ -16,6 +16,7 @@ from datasets import build_dataset, get_coco_api_from_dataset
 from engine import evaluate, train_one_epoch
 from models import build_model
 import torch.nn as nn  # 추가
+import os
 
 
 def get_args_parser():
@@ -29,7 +30,6 @@ def get_args_parser():
     parser.add_argument('--clip_max_norm', default=0.1, type=float, help='gradient clipping max norm')
     parser.add_argument('--want_class', type=int, help='number of class which want to finetuning')  # 추가
 
-    # Model parameters
     parser.add_argument('--frozen_weights', type=str, default=None,
                         help="Path to the pretrained model. If set, only the mask head will be trained")
     parser.add_argument('--backbone', default='resnet50', type=str, help="Name of the convolutional backbone to use")
@@ -50,7 +50,6 @@ def get_args_parser():
 
     parser.add_argument('--masks', action='store_true', help="Train segmentation head if the flag is provided")
 
-    # Loss
     parser.add_argument('--no_aux_loss', dest='aux_loss', action='store_false',
                         help="Disables auxiliary decoding losses (loss at each layer)")
     parser.add_argument('--set_cost_class', default=1, type=float, help="Class coefficient in the matching cost")
@@ -153,26 +152,36 @@ def main(args):
                                  drop_last=False, collate_fn=utils.collate_fn, num_workers=args.num_workers)
 
     if args.eval:
-        test_stats, coco_evaluator = evaluate(model, criterion, postprocessors, data_loader_val, dataset_val, device, args.output_dir)
+        base_ds = get_coco_api_from_dataset(dataset_val)  # 이 라인 추가
+        test_stats, coco_evaluator = evaluate(model, criterion, postprocessors, data_loader_val, base_ds, device, args.output_dir)
         return
 
     print("Start training")
     start_time = time.time()
+    
     for epoch in range(args.start_epoch, args.epochs):
-        if args.distributed:
-            sampler_train.set_epoch(epoch)
+        
 
-        train_stats = train_one_epoch(
-            model, criterion, data_loader_train, optimizer, device, epoch, args.clip_max_norm
-        )
-        lr_scheduler.step()
+        # epoch마다 모델 저장
+        if args.output_dir:
+            checkpoint_path = Path(args.output_dir) / f"checkpoint_{epoch:03}.pth"
+            utils.save_on_master({
+                'model': model_without_ddp.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'lr_scheduler': lr_scheduler.state_dict(),
+                'epoch': epoch,
+                'args': args,
+            }, checkpoint_path)
+
+            # 에폭별 성능 로그를 epoch_log.txt에 기록
+            log_path = os.path.join(args.output_dir, "epoch_log.txt")
+            with open(log_path, "a") as f:
+                f.write(f"Epoch {epoch} - Train Stats: {train_stats}\n")
+                f.write(f"Epoch {epoch} - Test  Stats: {test_stats}\n\n")
 
 
-        base_ds = get_coco_api_from_dataset(dataset_val)
-        test_stats, coco_evaluator = evaluate(
-            model, criterion, postprocessors, data_loader_val, base_ds, device, args.output_dir
-        )
 
+    
     total_time = time.time() - start_time
     print('Training time:', str(datetime.timedelta(seconds=int(total_time))))
 
