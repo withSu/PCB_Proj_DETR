@@ -48,6 +48,10 @@ def visualize_single_image(image_path, result, vis_dir, threshold=0.5):
         print(f"[ERROR] Failed to open image: {image_path}")
         return
 
+    # 이미지 크기 계산
+    img_height, img_width = img.shape[:2]
+    img_size_text = f"Image Size: {img_width}x{img_height} (pixels)"
+
     boxes  = result["boxes"].cpu().numpy()
     scores = result["scores"].cpu().numpy()
     labels = result["labels"].cpu().numpy()
@@ -56,12 +60,22 @@ def visualize_single_image(image_path, result, vis_dir, threshold=0.5):
         if score < threshold:
             continue
         x1, y1, x2, y2 = box.astype(int)
-        color = (0, 255, 0)
-        cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
-        text = f"{label}:{score:.2f}"
-        cv2.putText(img, text, (x1, max(y1-5, 0)),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+        area = (x2 - x1) * (y2 - y1)  # 박스 면적 계산
+        color = (0, 0, 255)  # 빨간색 (BGR 형식)
+        thickness = 3  # 박스 굵기 (3픽셀)
+        cv2.rectangle(img, (x1, y1), (x2, y2), color, thickness)
 
+        # 개별 박스 정보 표시 (라벨, 점수, 면적)
+        text = f"{label}:{score:.2f}, Area:{area}"
+        cv2.putText(img, text, (x1, max(y1-10, 0)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+    # 이미지 크기를 이미지 왼쪽 상단에 표시
+    text_position = (10, 30)
+    cv2.putText(img, img_size_text, text_position,
+                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)  # 노란색 텍스트
+
+    # 결과 저장
     base_name = os.path.basename(image_path)  # ex) "image1.jpg"
     out_name = base_name.replace(".jpg", "_res.jpg")
     save_path = os.path.join(vis_dir, out_name)
