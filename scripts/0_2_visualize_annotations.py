@@ -50,8 +50,8 @@ def visualize_coco_annotations(image_dir, json_file, num_images=5):
         plt.show()
 
 # 이미지 디렉토리와 어노테이션 파일 경로
-image_dir = '/home/a/A_2024_selfcode/PCB_DETR/raw_datasets/1_images'
-json_file = '/home/a/A_2024_selfcode/PCB_DETR/datasets/annotations/test.json'
+image_dir = '/home/a/A_2024_selfcode/PCB_proj_DETR/raw_datasets/1_images'
+json_file = '/home/a/A_2024_selfcode/PCB_proj_DETR/datasets/annotations/test.json'
 
 # 시각화 실행
 visualize_coco_annotations(image_dir, json_file, num_images=5)
