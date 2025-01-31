@@ -148,7 +148,7 @@ def main(args):
         
 
         # epoch마다 모델 저장 (모델 체크포인트 저장)
-        if args.output_dir:
+        if args.output_dir and (epoch + 1) % 50 == 0:
             checkpoint_path = Path(args.output_dir) / f"checkpoint_{epoch:03}.pth"
             utils.save_on_master({
                 'model': model_without_ddp.state_dict(),
